@@ -1,15 +1,13 @@
 {
   "name": "pair-code-bot",
   "version": "1.0.0",
-  "description": "WhatsApp Baileys Pair Code Bot - Vercel Deploy",
   "main": "index.js",
-  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.5",
     "express": "^4.18.2",
-    "qrcode": "^1.5.3"
+    "qrcode": "^1.5.1",
+    "whatsapp-web.js": "^1.24.0"
   }
 }
