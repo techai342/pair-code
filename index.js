@@ -1,39 +1,60 @@
 import express from "express";
-import cors from "cors";
-import makeWASocket, { useMultiFileAuthState } from "@whiskeysockets/baileys";
-import QRCode from "qrcode";
+import { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } from "@whiskeysockets/baileys";
+import qrcode from "qrcode";
 
 const app = express();
-app.use(cors());
+const PORT = process.env.PORT || 3000;
+
 app.use(express.json());
 
+// 📡 Server Route
 app.get("/", (req, res) => {
-  res.send("✅ Pair Code Generator is running!");
+  res.send("✅ WhatsApp Pair Code Bot Server Running!");
 });
 
-app.post("/pair", async (req, res) => {
+let qrCodeData = null;
+
+// 🧾 Pair Code / QR Generate Route
+app.get("/pair", async (req, res) => {
   try {
-    const { state, saveCreds } = await useMultiFileAuthState(`./sessions`);
+    const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
+    const { version } = await fetchLatestBaileysVersion();
     const sock = makeWASocket({
-      auth: state,
-      printQRInTerminal: false
+      version,
+      printQRInTerminal: true,
+      auth: state
     });
 
     sock.ev.on("connection.update", async (update) => {
       const { qr, connection } = update;
       if (qr) {
-        const qrImage = await QRCode.toDataURL(qr);
-        res.json({ qr: qrImage });
+        qrCodeData = await qrcode.toDataURL(qr);
       }
       if (connection === "open") {
-        console.log("✅ WhatsApp connected successfully");
+        console.log("✅ WhatsApp Connected!");
       }
     });
 
     sock.ev.on("creds.update", saveCreds);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+
+    setTimeout(() => {
+      if (qrCodeData) {
+        res.send(`
+          <h1>📲 Scan This QR Code With Your WhatsApp</h1>
+          <img src="${qrCodeData}" alt="QR Code" />
+        `);
+      } else {
+        res.send("❌ QR Code not generated yet. Try again.");
+      }
+    }, 2000);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("❌ Error generating QR Code");
   }
 });
 
-app.listen(3000, () => console.log("🚀 Pair code server running on port 3000"));
+// 🚀 Start Server
+app.listen(PORT, () => {
+  console.log(`✅ Server running on http://localhost:${PORT}`);
+});
